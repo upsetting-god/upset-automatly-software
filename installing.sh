@@ -25,7 +25,7 @@ main() {
     pip install -r requiments.txt &> /dev/null
     chmod +x ./upset.py
     echo "for the next launch use ./upset.py"
-    ./upset.py
+    python3 upset.py
 }
 
 main
