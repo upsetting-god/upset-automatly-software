@@ -7,8 +7,15 @@ import shutil
 from settings import *
 
 
+def create_folder():
+    if os.path.isdir(".backups"):
+        return
+    else:
+        os.mkdir(".backups")
+
+
 class AutoUpdate:
-    VERSION = "0.2"
+    VERSION = "0.3"
     FILES = ["upset.py", "settings.py"]
     REPO_URL = (
         "https://raw.githubusercontent.com/upsetting-god/upset-automatly-software/main"
@@ -67,7 +74,7 @@ class AutoUpdate:
 
 
 if __name__ == "__main__":
-    subprocess.run(["mkdir", ".backups"])
+    create_folder()
     updater = AutoUpdate()
     updater.run()
 
