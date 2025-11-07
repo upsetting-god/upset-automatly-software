@@ -13,6 +13,41 @@ def is_termux():
 MODULES_DIR = ".modules"
 
 
+def run_go_module(filepath):
+    import tempfile
+
+    if not os.path.isfile(filepath):
+        print(f"❌ File not found: {filepath}")
+        return
+
+    print(f"[▶️] Executing Go module: {os.path.basename(filepath)}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        safe_path = os.path.join(tmp, "main.go")
+        shutil.copy(filepath, safe_path)
+
+        try:
+            result = subprocess.run(
+                ["go", "run", "main.go"],
+                cwd=tmp,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            print(result.stdout, end="")
+            if result.stderr.strip():
+                print("STDERR:", result.stderr, file=sys.stderr)
+        except subprocess.CalledProcessError as e:
+            print("❌ Failed to run Go module:")
+            print("Exit code:", e.returncode)
+            if e.stdout.strip():
+                print("STDOUT:\n", e.stdout)
+            if e.stderr.strip():
+                print("STDERR:\n", e.stderr)
+        except FileNotFoundError:
+            print("❌ 'go' command not found. Install Go.")
+
+
 class Main:
     def run(self):
         banner = """
@@ -361,7 +396,9 @@ class Modules:
             print("[*] Compilation is successful")
             print(f"[*] Executing .c module: {selected}")
             sp.run([f"./module_{nm_md}"])
-
+        elif selected.endswith(".go"):
+            print(f"[*] Executing Go module: {selected}")
+            run_go_module(f"./.modules/{selected}")
         else:
             print(f"⚠️ Unknown type: {selected}")
 
