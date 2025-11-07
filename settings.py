@@ -3,10 +3,14 @@ import requests
 import subprocess
 import shutil
 import time
+import sys
 
 
 def is_termux():
     return "TERMUX_VERSION" in os.environ
+
+
+MODULES_DIR = ".modules"
 
 
 class Main:
@@ -29,7 +33,9 @@ class Main:
                         [1] - OSINT
                         [2] - DOS
                         [3] - GENERATED PAYLOAD
-                        [4] - ABOUT AUTHOR
+                        [4] - INSTALL MODULES
+                        [5] - USE MODULES
+                        [6] - ABOUT AUTHOR
 """
         print(banner)
         choice = input("upset@software: ")
@@ -40,12 +46,18 @@ class Main:
         elif choice == "3":
             payloads = Payloads()
             payloads.main()
-        elif choice == "4":
+        elif choice == "5":
+            p = Modules()
+            p.exec()
+        elif choice == "6":
             msg = "Enter to my telegram channel https://t.me/+dX9hj3xAbF9hYTQ0 and follow the news!"
 
             for letter in msg:
                 print(letter, end="", flush=True)
                 time.sleep(0.05)
+        elif choice == "4":
+            s = Modules()
+            s.install()
         else:
             print("Invalid option.")
 
@@ -279,6 +291,137 @@ class Payloads:
 
         except Exception as e:
             print(f"❌Error: {str(e)}")
+
+
+class Modules:
+    def __init__(self):
+        os.makedirs(MODULES_DIR, exist_ok=True)
+
+    def exec(self):
+        print("=" * 10, "Available Modules", "=" * 10)
+        try:
+            md = [
+                f
+                for f in os.listdir(MODULES_DIR)
+                if os.path.isfile(os.path.join(MODULES_DIR, f))
+            ]
+        except FileNotFoundError:
+            print(f"Directory '{MODULES_DIR}' not found.")
+            return
+
+        if not md:
+            print("No modules found.")
+            return
+
+        for i, name in enumerate(md, start=1):
+            print(f"[{i}] {name}")
+
+        print()
+        try:
+            choice = int(input("Choose your module → ")) - 1
+            if choice < 0 or choice >= len(md):
+                print("Invalid choice.")
+                return
+            selected = md[choice]
+        except (ValueError, KeyboardInterrupt):
+            print("Cancelled.")
+            return
+
+        path = os.path.join(MODULES_DIR, selected)
+
+        if selected.endswith(".py"):
+            print(f"[▶️] Executing Python module: {selected}")
+            try:
+                with open(path, encoding="utf-8") as f:
+                    code = f.read()
+                exec(code, {"__file__": path})
+            except Exception as e:
+                print(f"❌ Python execution failed: {e}")
+
+        elif selected.endswith(".sh"):
+            print(f"[^] Executing Bash module: {selected}")
+            try:
+                import subprocess
+
+                result = subprocess.run(["bash", path], text=True, capture_output=True)
+                if result.stdout:
+                    print(result.stdout)
+                if result.stderr:
+                    print("STDERR:", result.stderr, file=sys.stderr)
+                if result.returncode != 0:
+                    print(f"❌ Bash script failed (exit {result.returncode})")
+            except Exception as e:
+                print(f"❌ Bash execution failed: {e}")
+        elif selected.endswith(".c"):
+            print(f"[^] Compiling {selected} module..")
+            nm_md = selected.strip(".c")
+            import subprocess as sp
+
+            sp.run(["gcc", f"./.modules/{selected}", "-o", f"module_{nm_md}"])
+            print("[*] Compilation is successful")
+            print(f"[*] Executing .c module: {selected}")
+            sp.run([f"./module_{nm_md}"])
+
+        else:
+            print(f"⚠️ Unknown type: {selected}")
+
+    def install(self):
+        print("[💻] Checking available modules...")
+        url = "https://api.github.com/users/upsetting-god/gists"
+        try:
+            resp = requests.get(url, timeout=10)
+            resp.raise_for_status()
+            gists = resp.json()
+        except Exception as e:
+            print(f"Failed to fetch gists: {e}")
+            return
+
+        files = []
+        for gist in gists:
+            for f in gist.get("files", {}).values():
+                name = f.get("filename", "")
+                raw = f.get("raw_url")
+                if name.startswith("module_") and raw:
+                    files.append({"filename": name, "url": raw})
+
+        if not files:
+            print("No modules available.")
+            return
+
+        print("\nAvailable modules:\n")
+        for i, f in enumerate(files, start=1):
+            print(f"[{i}] {f['filename']}")
+
+        print()
+        try:
+            inp = input("Enter number (0 to cancel): ").strip()
+            if not inp.isdigit():
+                print("Invalid input.")
+                return
+            n = int(inp)
+            if n == 0:
+                print("Cancelled.")
+                return
+            if n < 1 or n > len(files):
+                print("Invalid number.")
+                return
+            selected = files[n - 1]
+        except KeyboardInterrupt:
+            print("Cancelled.")
+            return
+
+        filename = selected["filename"]
+        filepath = os.path.join(MODULES_DIR, filename)
+        print(f"[📥] Downloading '{filename}'...")
+
+        try:
+            r = requests.get(selected["url"], timeout=10)
+            r.raise_for_status()
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(r.text)
+            print(f"✅ Installed: {filename}")
+        except Exception as e:
+            print(f"Installation failed: {e}")
 
 
 if __name__ == "__main__":
